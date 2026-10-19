@@ -1,0 +1,7 @@
+node_modules/
+dist/
+# Chỉ bỏ qua thư mục ảnh gốc ở root (full-res, không cần commit)
+# public/images/ (thumbnails) vẫn được commit để deploy lên GitHub Pages
+/images/
+.DS_Store
+*.log

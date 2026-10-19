@@ -1,0 +1,25 @@
+{
+  "name": "hanhphuc-gallery",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "generate": "node scripts/generate.js",
+    "generate:force": "node scripts/generate.js --force"
+  },
+  "dependencies": {
+    "dexie": "^4.0.8",
+    "exceljs": "^4.4.0",
+    "photoswipe": "^5.4.4",
+    "pinia": "^2.2.6",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "sharp": "^0.33.5",
+    "vite": "^5.4.14"
+  }
+}
