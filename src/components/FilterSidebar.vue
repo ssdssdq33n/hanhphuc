@@ -13,18 +13,6 @@
       </div>
     </div>
 
-    <!-- Warehouse -->
-    <div class="fs-section" v-if="store.allWarehouse.length > 1">
-      <div class="fs-title">Bộ ảnh</div>
-      <div class="fs-opts">
-        <label v-for="w in store.allWarehouse" :key="w" class="fs-opt-check">
-          <input type="checkbox" :value="w" v-model="store.filters.warehouses" />
-          <span class="fs-opt-label">{{ w }}</span>
-          <span class="fs-count">{{ countWarehouse(w) }}</span>
-        </label>
-      </div>
-    </div>
-
     <!-- Note filter -->
     <div class="fs-section">
       <div class="fs-title">Ghi chú</div>
@@ -83,35 +71,6 @@
       </div>
     </div>
 
-    <!-- Warehouse stats (collapsible) -->
-    <div class="fs-section" v-if="store.allWarehouse.length > 1">
-      <button class="fs-collapsible" @click="whOpen = !whOpen">
-        <span class="fs-title-inline">Theo bộ ảnh</span>
-        <svg class="fs-chev" :class="{ open: whOpen }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
-      </button>
-      <div v-if="whOpen" class="wh-stats">
-        <div v-for="ws in store.warehouseStats" :key="ws.name" class="wh-row">
-          <div class="wh-name-row">
-            <span class="wh-name">{{ ws.name }}</span>
-            <span class="wh-total">{{ ws.total }} ảnh</span>
-          </div>
-          <div class="wh-bar-wrap">
-            <div class="wh-bar">
-              <div class="wh-sel" :style="{ width: pct(ws.selected, ws.total) + '%' }"></div>
-              <div class="wh-rej" :style="{ left: pct(ws.selected, ws.total) + '%', width: pct(ws.rejected, ws.total) + '%' }"></div>
-            </div>
-          </div>
-          <div class="wh-nums">
-            <span class="wh-n sel">✓{{ ws.selected }}</span>
-            <span class="wh-n rej">✗{{ ws.rejected }}</span>
-            <span class="wh-n muted">⋯{{ ws.pending }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div class="fs-divider"></div>
 
     <!-- Bulk actions -->
@@ -140,11 +99,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useGalleryStore } from '@/stores/gallery.js'
 
-const store  = useGalleryStore()
-const whOpen = ref(false)
+const store = useGalleryStore()
 
 const statusOpts = [
   { v: 'all',      label: 'Tất cả' },
@@ -160,11 +118,8 @@ const done   = computed(() => stats.value.total ? +((stats.value.selected + stat
 
 const hasFilters = computed(() =>
   store.filters.search || store.filters.status !== 'all' ||
-  store.filters.warehouses.length > 0 || store.filters.hasNote !== null ||
-  store.filters.sttFrom || store.filters.sttTo
+  store.filters.hasNote !== null || store.filters.sttFrom || store.filters.sttTo
 )
-
-function pct(n, total) { return total ? +(n / total * 100).toFixed(1) : 0 }
 
 function countStatus(v) {
   const pool = store.currentPool
@@ -177,9 +132,8 @@ function countStatus(v) {
     return s === null
   }).length
 }
-function countWarehouse(w)   { return store.currentPool.filter(i => i.warehouse === w).length }
-function countNote(has)      { return store.currentPool.filter(i => has ? !!store.notes[i.id]?.text : !store.notes[i.id]?.text).length }
-function toggleNote(val)     { store.filters.hasNote = store.filters.hasNote === val ? null : val }
+function countNote(has) { return store.currentPool.filter(i => has ? !!store.notes[i.id]?.text : !store.notes[i.id]?.text).length }
+function toggleNote(val) { store.filters.hasNote = store.filters.hasNote === val ? null : val }
 </script>
 
 <style scoped>
@@ -191,15 +145,6 @@ function toggleNote(val)     { store.filters.hasNote = store.filters.hasNote ===
   font-size: 10px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .7px; color: var(--text-3); margin-bottom: 7px;
 }
-.fs-title-inline { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--text-3); }
-
-.fs-collapsible {
-  width: 100%; display: flex; align-items: center;
-  background: transparent; border: none; cursor: pointer;
-  padding: 0 0 7px 0; gap: 4px;
-}
-.fs-chev { width: 13px; height: 13px; color: var(--text-3); transition: transform .2s; }
-.fs-chev.open { transform: rotate(180deg); }
 
 .fs-opts { display: flex; flex-direction: column; gap: 2px; }
 
@@ -247,22 +192,6 @@ function toggleNote(val)     { store.filters.hasNote = store.filters.hasNote ===
 .p-sel { position: absolute; left: 0; top: 0; height: 100%; background: var(--selected); transition: width .3s; }
 .p-rej { position: absolute; top: 0; height: 100%; background: var(--rejected); transition: .3s; }
 .p-pct { font-size: 10px; color: var(--text-3); }
-
-/* Warehouse stats */
-.wh-stats { display: flex; flex-direction: column; gap: 10px; padding-top: 2px; }
-.wh-row { padding: 7px 8px; background: var(--bg); border-radius: 7px; }
-.wh-name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
-.wh-name  { font-size: 11.5px; font-weight: 700; color: var(--text); }
-.wh-total { font-size: 10.5px; color: var(--text-3); }
-.wh-bar-wrap { margin-bottom: 4px; }
-.wh-bar { position: relative; height: 5px; background: var(--border-2); border-radius: 3px; overflow: hidden; }
-.wh-sel { position: absolute; left: 0; top: 0; height: 100%; background: var(--selected); }
-.wh-rej { position: absolute; top: 0; height: 100%; background: var(--rejected); }
-.wh-nums { display: flex; gap: 8px; }
-.wh-n { font-size: 10px; font-weight: 600; }
-.wh-n.sel   { color: var(--selected); }
-.wh-n.rej   { color: var(--rejected); }
-.wh-n.muted { color: var(--text-3); }
 
 /* Bulk actions */
 .bulk-list { display: flex; flex-direction: column; gap: 5px; }
