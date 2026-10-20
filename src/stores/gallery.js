@@ -46,6 +46,12 @@ export const useGalleryStore = defineStore('gallery', () => {
   const hoveredImageId   = ref(null)
   const batchNoteOpen    = ref(false)
 
+  // ── Images-folder state (full-res originals via File System Access API) ──────
+  const imagesHandle     = ref(null)
+  const imagesFolderName = ref('')
+  const imagesReady      = ref(false)
+  const _fullResCache    = new Map()  // id → blob URL (persists across panel opens)
+
   // ── Folder storage state ───────────────────────────────────────────────────
 
   /** Current FileSystemDirectoryHandle (null = not configured) */
@@ -426,6 +432,60 @@ export const useGalleryStore = defineStore('gallery', () => {
     }
   }
 
+  // ── Images folder: full-res loading ───────────────────────────────────────
+
+  /** Open native picker to select the root folder that contains full-res images. */
+  async function pickImagesFolder() {
+    if (!fsStorage.supported) return
+    try {
+      const handle = await window.showDirectoryPicker({
+        id: 'hanhphuc-images', mode: 'read', startIn: 'pictures',
+      })
+      imagesHandle.value     = handle
+      imagesFolderName.value = handle.name
+      imagesReady.value      = true
+      await fsStorage.persistImagesHandle(handle)
+    } catch (e) {
+      if (e.name !== 'AbortError') console.error('[images folder]', e)
+    }
+  }
+
+  /** Re-request read permission for the stored images handle (user-gesture required). */
+  async function reconnectImagesFolder() {
+    if (!imagesHandle.value) { await pickImagesFolder(); return }
+    const granted = await fsStorage.verifyReadPermission(imagesHandle.value)
+    if (granted) imagesReady.value = true
+  }
+
+  /** Forget the images folder and clear all blob URL caches. */
+  function disconnectImagesFolder() {
+    _fullResCache.forEach(url => URL.revokeObjectURL(url))
+    _fullResCache.clear()
+    imagesHandle.value     = null
+    imagesFolderName.value = ''
+    imagesReady.value      = false
+    fsStorage.removeImagesHandle()
+  }
+
+  /**
+   * Return a blob URL for the full-res image file from the images folder.
+   * Caches the URL so the file is only read once per session.
+   * Returns null if images folder not connected or file not found.
+   */
+  async function getFullResUrl(image) {
+    if (!image || !imagesHandle.value || !imagesReady.value) return null
+    if (_fullResCache.has(image.id)) return _fullResCache.get(image.id)
+    try {
+      const file = await fsStorage.getFileFromPath(imagesHandle.value, image.path)
+      const url  = URL.createObjectURL(file)
+      _fullResCache.set(image.id, url)
+      return url
+    } catch (e) {
+      if (e.name === 'NotAllowedError') imagesReady.value = false
+      return null
+    }
+  }
+
   // ── Compare ────────────────────────────────────────────────────────────────
 
   function toggleCompare(imageId) {
@@ -433,7 +493,7 @@ export const useGalleryStore = defineStore('gallery', () => {
     if (idx >= 0) {
       compareList.value.splice(idx, 1)
       if (compareList.value.length === 0) comparePanelOpen.value = false
-    } else if (compareList.value.length < 4) {
+    } else if (compareList.value.length < 6) {
       compareList.value.push(imageId)
     }
   }
@@ -523,6 +583,17 @@ export const useGalleryStore = defineStore('gallery', () => {
     if (!rounds.value.find(r => r.id === currentRoundId.value))
       currentRoundId.value = rounds.value[0]?.id ?? 1
 
+    // Restore images folder handle (silent check — no user gesture needed)
+    if (fsStorage.supported) {
+      const imgHandle = await fsStorage.loadImagesHandle()
+      if (imgHandle) {
+        imagesHandle.value     = imgHandle
+        imagesFolderName.value = imgHandle.name
+        const granted = await fsStorage.checkReadPermission(imgHandle)
+        if (granted) imagesReady.value = true
+      }
+    }
+
     loaded.value = true
   }
 
@@ -592,5 +663,8 @@ export const useGalleryStore = defineStore('gallery', () => {
     setThumbnailSize, setColWidth,
     initialize, exportStateJSON, importStateJSON, resetAllData,
     pickDataFolder, reconnectFolder, disconnectFolder, flushFolderSave,
+    // images folder (full-res)
+    imagesHandle, imagesFolderName, imagesReady,
+    getFullResUrl, pickImagesFolder, reconnectImagesFolder, disconnectImagesFolder,
   }
 })

@@ -75,7 +75,15 @@
             <div class="hdrop-div"></div>
             <button v-if="store.folderStatus !== 'ready'" @click="store.pickDataFolder()">📁 Chọn thư mục data...</button>
             <button v-if="store.folderStatus === 'ready'" @click="store.flushFolderSave()">💾 Lưu ngay vào thư mục</button>
-            <button v-if="store.folderStatus === 'ready'" @click="confirmDisconnect">⏏ Ngắt kết nối thư mục</button>
+            <button v-if="store.folderStatus === 'ready'" @click="confirmDisconnect">⏏ Ngắt kết nối thư mục data</button>
+            <div class="hdrop-div"></div>
+            <button v-if="!store.imagesReady" @click="store.pickImagesFolder()" title="Chọn thư mục gốc chứa ảnh JPG gốc để xem chất lượng cao trong Compare">
+              🖼 Chọn thư mục ảnh gốc...
+            </button>
+            <button v-else @click="store.reconnectImagesFolder()" class="success-text">
+              🖼 Ảnh gốc: {{ store.imagesFolderName }}
+            </button>
+            <button v-if="store.imagesReady" @click="store.disconnectImagesFolder()">⏏ Ngắt thư mục ảnh gốc</button>
           </template>
           <div class="hdrop-div"></div>
           <button class="danger" @click="confirmReset">🗑 Reset tất cả dữ liệu</button>
@@ -219,5 +227,6 @@ button.fs-badge { cursor: pointer; font-family: inherit; }
 }
 .hdrop button:hover { background: var(--bg); }
 .hdrop button.danger { color: var(--rejected); }
+.hdrop button.success-text { color: #2E7D32; }
 .hdrop-div { border-top: 1px solid var(--border); margin: 3px 0; }
 </style>

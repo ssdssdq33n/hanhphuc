@@ -145,3 +145,42 @@ export async function writeState(handle, state) {
   await writable.write(JSON.stringify(state, null, 2))
   await writable.close()
 }
+
+// ── Images folder handle (separate key, read-only) ────────────────────────────
+
+const IMAGES_DIR_KEY = 'imagesDir'
+
+export async function loadImagesHandle()       { return metaGet(IMAGES_DIR_KEY) }
+export async function persistImagesHandle(h)  { return metaPut(IMAGES_DIR_KEY, h) }
+export async function removeImagesHandle()    { return metaDel(IMAGES_DIR_KEY) }
+
+/** Query read permission without prompting (safe on page load). */
+export async function checkReadPermission(handle) {
+  if (!handle) return false
+  try { return await handle.queryPermission({ mode: 'read' }) === 'granted' } catch { return false }
+}
+
+/** Request read permission — requires a user-gesture click. */
+export async function verifyReadPermission(handle) {
+  if (!handle) return false
+  try {
+    const opts = { mode: 'read' }
+    if (await handle.queryPermission(opts) === 'granted') return true
+    if (await handle.requestPermission(opts) === 'granted') return true
+    return false
+  } catch { return false }
+}
+
+/**
+ * Navigate a FileSystemDirectoryHandle through path segments and return a File.
+ * path is like "images/warehouse1/album/VJH00021.JPG"
+ */
+export async function getFileFromPath(rootHandle, path) {
+  const parts = path.split('/')
+  let dir = rootHandle
+  for (let i = 0; i < parts.length - 1; i++) {
+    dir = await dir.getDirectoryHandle(parts[i])
+  }
+  const fh = await dir.getFileHandle(parts[parts.length - 1])
+  return fh.getFile()
+}
