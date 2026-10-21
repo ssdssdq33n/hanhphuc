@@ -47,14 +47,21 @@
           </div>
 
           <div class="co-mode">
-            <button class="mode-btn" :class="{ active: viewMode === 'diff' }" @click="setMode('diff')" :disabled="store.compareList.length < 2" title="Kéo slider để thấy sự khác biệt">
+            <!-- Main mode -->
+            <button class="mode-btn" :class="{ active: viewMode === 'diff' }" @click="setMode('diff')" :disabled="store.compareList.length < 2">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><polyline points="5 8 2 12 5 16"/><polyline points="19 8 22 12 19 16"/></svg>
-              Diff Slider
+              Diff
             </button>
-            <button class="mode-btn" :class="{ active: viewMode === 'split' }" @click="setMode('split')" title="Xem song song + zoom đồng bộ (scroll = zoom, drag = pan)">
+            <button class="mode-btn" :class="{ active: viewMode === 'split' }" @click="setMode('split')">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>
               Song song
             </button>
+            <!-- Diff sub-mode (only visible in diff mode) -->
+            <template v-if="viewMode === 'diff'">
+              <div class="mode-sep"></div>
+              <button class="mode-btn sm" :class="{ active: diffSubMode === 'slider' }" @click="setDiffSubMode('slider')" title="Kéo slider để thấy sự khác biệt">Slider</button>
+              <button class="mode-btn sm" :class="{ active: diffSubMode === 'side' }" @click="setDiffSubMode('side')" title="A và B cạnh nhau + zoom đồng bộ">Cạnh nhau</button>
+            </template>
           </div>
 
           <button class="co-close" @click="store.comparePanelOpen = false" title="Đóng (Esc)">
@@ -62,10 +69,10 @@
           </button>
         </div>
 
-        <!-- ══════════════ DIFF SLIDER MODE ══════════════ -->
+        <!-- ══════════════ DIFF MODE ══════════════ -->
         <template v-if="viewMode === 'diff'">
 
-          <!-- Pair selector (when >2 images) -->
+          <!-- Pair selector (always shown when >2 images, for any sub-mode) -->
           <div v-if="store.compareList.length > 2" class="diff-selector">
             <span class="ds-hint">Click = A &nbsp;·&nbsp; Chuột phải = B</span>
             <div class="ds-thumbs">
@@ -81,64 +88,138 @@
             </div>
           </div>
 
-          <!-- Diff slider -->
-          <div class="diff-area" ref="sliderEl"
-            @mousedown.prevent="startSliderDrag"
-            @touchstart.prevent="startSliderDragTouch"
-          >
-            <div class="diff-layer">
-              <img :src="activeImgSrc(diffA)" class="diff-img" :alt="diffA" draggable="false" @load="onImgLoad(diffA)" />
-              <div v-if="isLoading(diffA)" class="diff-loading"><div class="spin"></div></div>
-            </div>
-            <div class="diff-layer diff-layer-b" :style="{ clipPath: `inset(0 ${(100-sliderPos).toFixed(2)}% 0 0)` }">
-              <img :src="activeImgSrc(diffB)" class="diff-img" :alt="diffB" draggable="false" @load="onImgLoad(diffB)" />
-              <div v-if="isLoading(diffB)" class="diff-loading"><div class="spin"></div></div>
+          <!-- SUB: Slider -->
+          <template v-if="diffSubMode === 'slider'">
+            <div class="diff-area" ref="sliderEl"
+              @mousedown.prevent="startSliderDrag"
+              @touchstart.prevent="startSliderDragTouch"
+            >
+              <div class="diff-layer">
+                <img :src="activeImgSrc(diffA)" class="diff-img" :alt="diffA" draggable="false" @load="onImgLoad(diffA)" />
+                <div v-if="isLoading(diffA)" class="diff-loading"><div class="spin"></div></div>
+              </div>
+              <div class="diff-layer diff-layer-b" :style="{ clipPath: `inset(0 ${(100-sliderPos).toFixed(2)}% 0 0)` }">
+                <img :src="activeImgSrc(diffB)" class="diff-img" :alt="diffB" draggable="false" @load="onImgLoad(diffB)" />
+                <div v-if="isLoading(diffB)" class="diff-loading"><div class="spin"></div></div>
+              </div>
+
+              <div class="diff-label dl-left">
+                <span class="dl-tag a">A</span>
+                <span class="dl-id">{{ imgOf(diffA)?.id }}</span>
+                <span class="dl-stt">#{{ imgOf(diffA)?.stt }}</span>
+              </div>
+              <div class="diff-label dl-right">
+                <span class="dl-stt">#{{ imgOf(diffB)?.stt }}</span>
+                <span class="dl-id">{{ imgOf(diffB)?.id }}</span>
+                <span class="dl-tag b">B</span>
+              </div>
+
+              <div class="diff-handle" :style="{ left: sliderPos + '%' }">
+                <div class="dh-line"></div>
+                <div class="dh-knob">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
+                    <polyline points="9 18 3 12 9 6"/><polyline points="15 6 21 12 15 18"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="diff-pct">{{ Math.round(sliderPos) }}%</div>
             </div>
 
-            <div class="diff-label dl-left">
-              <span class="dl-tag a">A</span>
-              <span class="dl-id">{{ imgOf(diffA)?.id }}</span>
-              <span class="dl-stt">#{{ imgOf(diffA)?.stt }}</span>
+            <div class="diff-footer">
+              <div class="df-card" v-for="(id, si) in [diffA, diffB]" :key="id + si">
+                <div class="df-tag" :class="si === 0 ? 'a' : 'b'">{{ si === 0 ? 'A' : 'B' }}</div>
+                <div class="df-meta">
+                  <span class="df-id">{{ imgOf(id)?.id }}</span>
+                  <span class="df-stt">#{{ imgOf(id)?.stt }}</span>
+                  <span class="df-status" :class="statusOf(id) ?? 'pending'">{{ statusLabel(id) }}</span>
+                </div>
+                <div class="df-btns">
+                  <button class="dfb sel" :class="{ active: statusOf(id) === 'selected' }" @click="toggleSelect(id)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Chọn
+                  </button>
+                  <button class="dfb rej" :class="{ active: statusOf(id) === 'rejected' }" @click="toggleReject(id)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Loại
+                  </button>
+                </div>
+              </div>
+              <button class="swap-btn" @click="swapAB" title="Đổi A↔B (S)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                A↔B
+              </button>
             </div>
-            <div class="diff-label dl-right">
-              <span class="dl-stt">#{{ imgOf(diffB)?.stt }}</span>
-              <span class="dl-id">{{ imgOf(diffB)?.id }}</span>
-              <span class="dl-tag b">B</span>
-            </div>
+          </template>
 
-            <div class="diff-handle" :style="{ left: sliderPos + '%' }">
-              <div class="dh-line"></div>
-              <div class="dh-knob">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
-                  <polyline points="9 18 3 12 9 6"/><polyline points="15 6 21 12 15 18"/>
-                </svg>
+          <!-- SUB: Side-by-side (reuses split infrastructure with only diffA + diffB) -->
+          <template v-else>
+            <div class="zoom-bar">
+              <button class="zb-btn" @click="zoomOut" :disabled="zoom <= 1" title="(-)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+              <div class="zb-pct" @click="resetZoom" title="Reset">{{ Math.round(zoom * 100) }}%</div>
+              <button class="zb-btn" @click="zoomIn" :disabled="zoom >= 8" title="(+)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+              <div class="zb-sep"></div>
+              <button class="swap-btn-sm" @click="swapAB" title="Đổi A↔B (S)">⇄ A↔B</button>
+              <div class="zb-sep"></div>
+              <span class="zb-hint">Scroll=zoom · Drag=pan · Dbl-click=reset</span>
+              <span v-if="!store.imagesReady && fsSupported" class="zb-quality-warn">
+                <button class="zb-connect-btn" @click="store.pickImagesFolder()">⚡ Kết nối ảnh gốc để xem chất lượng cao khi zoom</button>
+              </span>
+            </div>
+            <div class="split-area" ref="splitAreaEl"
+              @wheel.prevent="onWheelSplit" @mousedown="startPan" @dblclick="resetZoom"
+              :style="{ cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default' }"
+            >
+              <div class="split-zoom-wrap" :style="zoomWrapStyle">
+                <div v-for="(panel, pi) in sidePanelLayout" :key="panel.id" class="split-panel"
+                  :style="{ left: panel.left + '%', width: panel.width + '%' }">
+                  <img :src="activeImgSrc(panel.id)" class="split-img" :alt="panel.id" draggable="false" @load="onImgLoad(panel.id)" />
+                  <div v-if="isLoading(panel.id)" class="split-loading"><div class="spin"></div></div>
+                </div>
+              </div>
+              <!-- Single divider between A and B -->
+              <div class="split-divider" :style="{ left: sideRatios[0] + '%' }"
+                @mousedown.stop.prevent="startSideDividerDrag">
+                <div class="divider-line"></div>
+                <div class="divider-knob">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                    <line x1="5" y1="9" x2="5" y2="15"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="19" y1="9" x2="19" y2="15"/>
+                  </svg>
+                </div>
+              </div>
+              <!-- A/B labels -->
+              <div class="panel-labels">
+                <div class="panel-label" :style="{ left: sideRatios[0] / 2 + '%' }">
+                  <span class="dl-tag a" style="font-size:10px;padding:1px 5px;border-radius:3px;">A</span>
+                  <span class="pl-id">{{ imgOf(diffA)?.id }}</span>
+                  <span class="pl-stt">#{{ imgOf(diffA)?.stt }}</span>
+                </div>
+                <div class="panel-label" :style="{ left: (sideRatios[0] + sideRatios[1] / 2) + '%' }">
+                  <span class="dl-tag b" style="font-size:10px;padding:1px 5px;border-radius:3px;">B</span>
+                  <span class="pl-id">{{ imgOf(diffB)?.id }}</span>
+                  <span class="pl-stt">#{{ imgOf(diffB)?.stt }}</span>
+                </div>
               </div>
             </div>
-            <div class="diff-pct">{{ Math.round(sliderPos) }}%</div>
-          </div>
+            <!-- Action bar for A and B -->
+            <div class="split-actions">
+              <div v-for="(id, si) in [diffA, diffB]" :key="id + '-side-act'" class="sa-card">
+                <span class="df-tag" :class="si === 0 ? 'a' : 'b'" style="font-size:11px;padding:2px 7px;border-radius:5px;">{{ si === 0 ? 'A' : 'B' }}</span>
+                <span class="sa-id">{{ imgOf(id)?.id }}</span>
+                <span class="sa-status" :class="statusOf(id) ?? 'pending'">{{ statusLabel(id) }}</span>
+                <div class="sa-btns">
+                  <button class="sab sel" :class="{ active: statusOf(id) === 'selected' }" @click="toggleSelect(id)" title="Chọn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  </button>
+                  <button class="sab rej" :class="{ active: statusOf(id) === 'rejected' }" @click="toggleReject(id)" title="Loại">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
 
-          <div class="diff-footer">
-            <div class="df-card" v-for="(id, si) in [diffA, diffB]" :key="id + si">
-              <div class="df-tag" :class="si === 0 ? 'a' : 'b'">{{ si === 0 ? 'A' : 'B' }}</div>
-              <div class="df-meta">
-                <span class="df-id">{{ imgOf(id)?.id }}</span>
-                <span class="df-stt">#{{ imgOf(id)?.stt }}</span>
-                <span class="df-status" :class="statusOf(id) ?? 'pending'">{{ statusLabel(id) }}</span>
-              </div>
-              <div class="df-btns">
-                <button class="dfb sel" :class="{ active: statusOf(id) === 'selected' }" @click="toggleSelect(id)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Chọn
-                </button>
-                <button class="dfb rej" :class="{ active: statusOf(id) === 'rejected' }" @click="toggleReject(id)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Loại
-                </button>
-              </div>
-            </div>
-            <button class="swap-btn" @click="swapAB" title="Đổi A↔B (S)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-              A↔B
-            </button>
-          </div>
         </template>
 
         <!-- ══════════════ SPLIT / MULTI-PANEL MODE ══════════════ -->
@@ -243,7 +324,8 @@ const splitAreaEl = ref(null)
 const fsSupported = typeof window !== 'undefined' && 'showDirectoryPicker' in window
 
 // ── View mode ──────────────────────────────────────────────────────────────────
-const viewMode = ref('diff')
+const viewMode    = ref('diff')
+const diffSubMode = ref('slider')
 
 function setMode(m) {
   viewMode.value = m
@@ -251,10 +333,19 @@ function setMode(m) {
   else              { resetZoom(); initSplitRatios() }
 }
 
+function setDiffSubMode(m) {
+  diffSubMode.value = m
+  resetZoom()
+  sideRatios.value = [50, 50]
+  if (m === 'side') nextTick(loadFullResForAll)
+}
+
 function openOverlay() {
-  viewMode.value = store.compareList.length <= 2 ? 'diff' : 'split'
+  viewMode.value    = store.compareList.length <= 2 ? 'diff' : 'split'
+  diffSubMode.value = 'slider'
   initDiffPair()
   initSplitRatios()
+  sideRatios.value = [50, 50]
   resetZoom()
   store.comparePanelOpen = true
   nextTick(loadFullResForAll)
@@ -338,6 +429,29 @@ function getSliderPct(clientX) {
 }
 function startSliderDrag(e)      { isSliding.value = true; sliderPos.value = getSliderPct(e.clientX) }
 function startSliderDragTouch(e) { isSliding.value = true; sliderPos.value = getSliderPct(e.touches[0].clientX) }
+
+// ── DIFF SIDE-BY-SIDE (sideRatios for A|B divider) ───────────────────────────
+const sideRatios = ref([50, 50])
+
+const sidePanelLayout = computed(() => {
+  const ids = [diffA.value, diffB.value].filter(Boolean)
+  let left = 0
+  return ids.map((id, i) => {
+    const l = left
+    left += sideRatios.value[i] ?? 0
+    return { id, left: l, width: sideRatios.value[i] ?? 0 }
+  })
+})
+
+const activeSideDivider = ref(false)
+const sideDivStartX     = ref(0)
+const sideDivStartR     = ref([50, 50])
+
+function startSideDividerDrag(e) {
+  activeSideDivider.value = true
+  sideDivStartX.value     = e.clientX
+  sideDivStartR.value     = [...sideRatios.value]
+}
 
 // ── SPLIT MODE ────────────────────────────────────────────────────────────────
 const splitRatios = ref([50, 50])
@@ -449,13 +563,25 @@ function onPanMove(e) {
 function stopPan() { isPanning.value = false }
 
 // ── Global mouse/touch/key listeners ──────────────────────────────────────────
+function onSideDividerMove(e) {
+  if (!activeSideDivider.value || !splitAreaEl.value) return
+  const rect = splitAreaEl.value.getBoundingClientRect()
+  const dPct = (e.clientX - sideDivStartX.value) / rect.width * 100
+  const MIN  = 8
+  const total = sideDivStartR.value[0] + sideDivStartR.value[1]
+  const a = Math.min(total - MIN, Math.max(MIN, sideDivStartR.value[0] + dPct))
+  sideRatios.value = [a, total - a]
+}
+
 function onGlobalMove(e) {
-  if (isSliding.value)          sliderPos.value = getSliderPct(e.clientX)
-  if (activeDivider.value >= 0) onDividerMove(e)
-  if (isPanning.value)          onPanMove(e)
+  if (isSliding.value)           sliderPos.value = getSliderPct(e.clientX)
+  if (activeSideDivider.value)   onSideDividerMove(e)
+  if (activeDivider.value >= 0)  onDividerMove(e)
+  if (isPanning.value)           onPanMove(e)
 }
 function onGlobalUp() {
-  isSliding.value = false
+  isSliding.value         = false
+  activeSideDivider.value = false
   stopDivider()
   stopPan()
 }
@@ -469,9 +595,20 @@ function onKeyDown(e) {
   if (document.activeElement?.matches('input,textarea,select')) return
 
   if (viewMode.value === 'diff') {
-    if (e.key === 'ArrowLeft')  { e.preventDefault(); sliderPos.value = Math.max(0,   sliderPos.value - 5) }
-    if (e.key === 'ArrowRight') { e.preventDefault(); sliderPos.value = Math.min(100, sliderPos.value + 5) }
     if (e.key === 's' || e.key === 'S') { e.preventDefault(); swapAB() }
+    if (diffSubMode.value === 'slider') {
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); sliderPos.value = Math.max(0,   sliderPos.value - 5) }
+      if (e.key === 'ArrowRight') { e.preventDefault(); sliderPos.value = Math.min(100, sliderPos.value + 5) }
+    } else {
+      // side-by-side: zoom+pan
+      if (e.key === '=' || e.key === '+') { e.preventDefault(); zoomIn()  }
+      if (e.key === '-')                  { e.preventDefault(); zoomOut() }
+      if (e.key === '0')                  { e.preventDefault(); resetZoom() }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); panX.value -= 40; clampPan() }
+      if (e.key === 'ArrowRight') { e.preventDefault(); panX.value += 40; clampPan() }
+      if (e.key === 'ArrowUp')    { e.preventDefault(); panY.value -= 40; clampPan() }
+      if (e.key === 'ArrowDown')  { e.preventDefault(); panY.value += 40; clampPan() }
+    }
   }
   if (viewMode.value === 'split') {
     if (e.key === '=' || e.key === '+') { e.preventDefault(); zoomIn()  }
@@ -483,6 +620,11 @@ function onKeyDown(e) {
     if (e.key === 'ArrowDown')  { e.preventDefault(); panY.value += 40; clampPan() }
   }
 }
+
+// Load full-res when user zooms in (only on first zoom-in from 1×)
+watch(zoom, (newZ, oldZ) => {
+  if (newZ > 1 && oldZ <= 1 && store.imagesReady) loadFullResForAll()
+})
 
 // Sync state when compareList changes
 watch(() => store.compareList.length, () => {
@@ -606,6 +748,8 @@ onUnmounted(() => {
 .mode-btn:hover:not(:disabled) { color: rgba(255,255,255,.8); background: rgba(255,255,255,.08); }
 .mode-btn.active { background: rgba(255,255,255,.14); color: #fff; }
 .mode-btn:disabled { opacity: .3; cursor: not-allowed; }
+.mode-btn.sm { padding: 4px 9px; font-size: 11px; }
+.mode-sep { width: 1px; height: 14px; background: rgba(255,255,255,.15); align-self: center; margin: 0 2px; }
 
 .co-close {
   width: 32px; height: 32px; border-radius: 50%;
@@ -759,6 +903,20 @@ onUnmounted(() => {
 .zb-pct:hover { background: rgba(255,255,255,.08); }
 .zb-sep { width: 1px; height: 16px; background: rgba(255,255,255,.12); }
 .zb-hint { font-size: 10px; color: rgba(255,255,255,.3); }
+.swap-btn-sm {
+  display: flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.15); background: transparent;
+  cursor: pointer; font-size: 11px; font-family: inherit; color: rgba(255,255,255,.55);
+  transition: all .14s;
+}
+.swap-btn-sm:hover { border-color: rgba(255,255,255,.35); color: rgba(255,255,255,.9); }
+.zb-quality-warn { margin-left: auto; }
+.zb-connect-btn {
+  padding: 3px 10px; border-radius: 6px; font-size: 10px; font-family: inherit; cursor: pointer;
+  background: rgba(255,183,77,.12); color: #FFB74D; border: 1px solid rgba(255,183,77,.3);
+  transition: background .12s;
+}
+.zb-connect-btn:hover { background: rgba(255,183,77,.22); }
 
 .split-area {
   flex: 1; position: relative; overflow: hidden; background: #000;

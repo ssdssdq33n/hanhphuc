@@ -10,25 +10,38 @@ import { useGalleryStore } from '@/stores/gallery.js'
 const store = useGalleryStore()
 
 let pswp = null
+let items = []            // mutable — src upgraded to full-res as slides are visited
+const loadedFullRes = new Set()  // indices already upgraded
+
+async function loadFullResForSlide(idx) {
+  if (!store.imagesReady || loadedFullRes.has(idx)) return
+  if (idx < 0 || idx >= items.length) return
+  const imgData = items[idx]._imgData
+  const url = await store.getFullResUrl(imgData)
+  if (!url) return
+  loadedFullRes.add(idx)
+  items[idx].src = url
+  // Refresh the slide in PhotoSwipe so it re-renders at full resolution
+  if (pswp && Math.abs(pswp.currIndex - idx) <= 1) {
+    try { pswp.refreshSlideContent(idx) } catch {}
+  }
+}
 
 async function openAt(startIndex) {
   if (pswp) { pswp.destroy(); pswp = null }
+  loadedFullRes.clear()
 
   const { default: PhotoSwipe } = await import('photoswipe')
 
-  const items = store.filteredImages.map(img => {
-    const isLocalDev = import.meta.env.DEV
-    return {
-      // In dev: use original high-res; in prod: use thumbnail (higher quality than grid thumb)
-      src: isLocalDev ? `./${img.path}` : `./${img.thumbPath}`,
-      msrc: `./${img.thumbPath}`,
-      width: img.width || 1600,
-      height: img.height || 1067,
-      alt: img.id,
-      // Attach image data for custom UI
-      _imgData: img,
-    }
-  })
+  items = store.filteredImages.map(img => ({
+    // Always start with thumbnail; full-res loads on-demand when imagesReady
+    src:   `./${img.thumbPath}`,
+    msrc:  `./${img.thumbPath}`,
+    width:  img.width  || 1600,
+    height: img.height || 1067,
+    alt: img.id,
+    _imgData: img,
+  }))
 
   pswp = new PhotoSwipe({
     dataSource: items,
@@ -83,17 +96,30 @@ async function openAt(startIndex) {
       order: 10,
       isButton: true,
       appendTo: 'bar',
-      html: '🔗 Ảnh gốc',
+      html: '🖼 Ảnh gốc',
       onInit: (el) => {
         el.className = 'pswp__button pswp__button--original'
-        pswp.on('change', () => {
+        const update = () => {
           const img = pswp.currSlide?.data?._imgData
-          el.style.display = img ? 'flex' : 'none'
-        })
-        el.addEventListener('click', () => {
+          if (!img) { el.style.display = 'none'; return }
+          el.style.display = 'flex'
+          el.title = store.imagesReady
+            ? `Mở ảnh gốc: ${img.filename}`
+            : 'Kết nối thư mục ảnh gốc trong menu Options để xem ảnh gốc'
+          el.style.opacity = store.imagesReady ? '1' : '0.45'
+        }
+        update()
+        pswp.on('change', update)
+        el.addEventListener('click', async () => {
           const img = pswp.currSlide?.data?._imgData
           if (!img) return
-          window.open(`./${img.path}`, '_blank')
+          if (!store.imagesReady) {
+            alert(`Chưa kết nối thư mục ảnh gốc.\n\nVào menu Options → "Chọn thư mục ảnh gốc..." để xem ảnh gốc chất lượng cao.`)
+            return
+          }
+          const url = await store.getFullResUrl(img)
+          if (url) { window.open(url, '_blank') }
+          else { alert(`Không tìm thấy file: ${img.path}`) }
         })
       },
     })
@@ -118,13 +144,21 @@ async function openAt(startIndex) {
     })
   })
 
-  // Caption showing image ID, STT, and status
+  // Load full-res for current + adjacent slides when available
   pswp.on('change', () => {
     updateCaption()
+    const idx = pswp.currIndex
+    loadFullResForSlide(idx)
+    loadFullResForSlide(idx - 1)
+    loadFullResForSlide(idx + 1)
   })
 
   pswp.on('afterInit', () => {
     updateCaption()
+    // Load full-res for the opening slide
+    loadFullResForSlide(startIndex)
+    loadFullResForSlide(startIndex - 1)
+    loadFullResForSlide(startIndex + 1)
   })
 
   function updateCaption() {

@@ -231,15 +231,17 @@ onUnmounted(() => {
 
 /* ── Back to top ── */
 .to-top {
-  position: sticky; bottom: 14px;
-  float: right; margin-right: 4px;
-  width: 38px; height: 38px; border-radius: 50%;
+  position: fixed;
+  right: 24px;
+  bottom: 96px;     /* above compare tray (~80px) */
+  z-index: 150;     /* above image cards, below tray/overlay */
+  width: 40px; height: 40px; border-radius: 50%;
   background: var(--gold); color: #fff;
   border: none; cursor: pointer;
-  font-size: 16px; font-weight: 700;
-  box-shadow: var(--shadow-md);
+  font-size: 18px; font-weight: 700;
+  box-shadow: 0 3px 14px rgba(0,0,0,.22);
   display: flex; align-items: center; justify-content: center;
-  transition: transform .14s;
+  transition: transform .14s, box-shadow .14s;
 }
-.to-top:hover { transform: scale(1.1); }
+.to-top:hover { transform: scale(1.12); box-shadow: 0 4px 18px rgba(0,0,0,.3); }
 </style>
