@@ -3,6 +3,8 @@
     <AppHeader />
     <RoundsBar />
     <div class="workspace">
+      <!-- Backdrop for mobile sidebar overlay -->
+      <div class="sidebar-backdrop" :class="{ 'sb-visible': sidebarOpen }" @click="sidebarOpen = false"></div>
       <aside class="sidebar" :class="{ open: sidebarOpen }">
         <FilterSidebar />
       </aside>
@@ -133,6 +135,40 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* ── Sidebar backdrop (mobile overlay) ──────────────── */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 149;
+  backdrop-filter: blur(2px);
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-w: 280px;
+  }
+  /* Sidebar becomes a fixed overlay on mobile */
+  .sidebar {
+    position: fixed !important;
+    left: 0;
+    top: calc(var(--header-h) + var(--rounds-h));
+    bottom: var(--status-h);
+    z-index: 150;
+    width: min(280px, 85vw) !important;
+    transform: translateX(-100%);
+    transition: transform .22s ease, box-shadow .22s ease;
+    overflow-y: auto;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 6px 0 24px rgba(0,0,0,.18);
+  }
+  .sidebar-backdrop.sb-visible { display: block; }
 }
 
 /* ── Utility ─────────────────────────────────────────── */

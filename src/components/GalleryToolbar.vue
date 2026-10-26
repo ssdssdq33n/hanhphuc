@@ -261,4 +261,18 @@ function toggleDir() {
   width: 14px; height: 14px; border-radius: 50%;
   background: var(--gold); border: 2.5px solid #fff;
 }
+
+/* ── Responsive ── */
+@media (max-width: 860px) {
+  .zoom-wrap { display: none; }
+}
+@media (max-width: 640px) {
+  .search-in { width: 160px; }
+  .ict-btn   { display: none; }
+}
+@media (max-width: 480px) {
+  .search-in  { width: 120px; }
+  .count-lbl  { display: none; }
+  .sort-sel   { max-width: 70px; }
+}
 </style>

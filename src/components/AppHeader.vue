@@ -61,7 +61,7 @@
     <div class="header-actions">
       <button class="hbtn accent" @click="store.exportModalOpen = true" title="Xuất Excel">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Xuất Excel
+        <span class="btn-text">Xuất Excel</span>
       </button>
 
       <div class="hbtn-group" ref="menuRef">
@@ -229,4 +229,19 @@ button.fs-badge { cursor: pointer; font-family: inherit; }
 .hdrop button.danger { color: var(--rejected); }
 .hdrop button.success-text { color: #2E7D32; }
 .hdrop-div { border-top: 1px solid var(--border); margin: 3px 0; }
+
+/* ── Responsive ── */
+@media (max-width: 860px) {
+  .header-center { display: none; }
+}
+@media (max-width: 640px) {
+  .app-header { padding: 0 10px; gap: 8px; }
+  .brand-sub  { display: none; }
+  .hbtn.accent { padding: 6px 10px; }
+  .hbtn svg   { width: 13px; height: 13px; }
+}
+@media (max-width: 480px) {
+  .brand-name { font-size: 13px; }
+  .hbtn.accent .btn-text { display: none; }
+}
 </style>

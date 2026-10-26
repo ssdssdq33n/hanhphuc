@@ -93,6 +93,14 @@ const rejPct  = computed(() => stats.value.total ? +(stats.value.rejected / stat
 
 @media (max-width: 860px) {
   .s-hint { display: none; }
-  .s-center .sep:last-of-type + .s-stat { display: none; }
+}
+@media (max-width: 600px) {
+  .s-right .s-view { font-size: 11px; }
+  .s-stat { font-size: 11px; gap: 3px; }
+  .sbar-inner { padding: 0 10px; gap: 8px; }
+}
+@media (max-width: 480px) {
+  .s-center { display: none; }
+  .s-right  { flex-direction: row; align-items: center; gap: 6px; }
 }
 </style>

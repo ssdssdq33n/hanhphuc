@@ -140,4 +140,10 @@ function delRound(round) {
 
 .rounds-right { flex-shrink: 0; font-size: 11.5px; color: var(--text-3); white-space: nowrap; }
 .rounds-right strong { color: var(--text-2); font-weight: 700; }
+
+@media (max-width: 600px) {
+  .rounds-bar { padding: 0 8px; }
+  .rounds-right { display: none; }
+  .round-tab { padding: 3px 8px; font-size: 11px; }
+}
 </style>

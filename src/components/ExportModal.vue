@@ -90,6 +90,9 @@
                 <span>{{ c.label }}</span>
               </label>
             </div>
+            <div class="col-note">
+              💡 Cột "Ảnh" dùng công thức <code>=IMAGE(url)</code> — copy/paste đúng, yêu cầu Excel 365 hoặc Google Sheets. Trên localhost sẽ embed ảnh thay thế.
+            </div>
           </div>
 
           <!-- Preview -->
@@ -136,7 +139,7 @@ const store = useGalleryStore()
 const multiSheet     = ref(false)
 const selectedRoundId = ref(store.currentRoundId)
 const statusFilter   = ref('selected')
-const selectedColumns = ref(['stt', 'id', 'thumb', 'folder', 'status', 'note'])
+const selectedColumns = ref(['stt', 'id', 'thumb', 'folder', 'status', 'note', 'content'])
 const exporting      = ref(false)
 const progressCurrent = ref(0)
 const progressTotal   = ref(0)
@@ -154,12 +157,14 @@ const statusOpts = [
 ]
 
 const columnOpts = [
-  { key: 'stt',    label: 'STT' },
-  { key: 'id',     label: 'ID Ảnh' },
-  { key: 'thumb',  label: 'Ảnh thumbnail' },
-  { key: 'folder', label: 'Folder/Bộ' },
-  { key: 'status', label: 'Trạng thái' },
-  { key: 'note',   label: 'Ghi chú' },
+  { key: 'stt',     label: 'STT' },
+  { key: 'id',      label: 'ID Ảnh' },
+  { key: 'thumb',   label: 'Ảnh (=IMAGE công thức)' },
+  { key: 'folder',  label: 'Folder/Bộ' },
+  { key: 'status',  label: 'Trạng thái' },
+  { key: 'note',    label: 'Ghi chú' },
+  { key: 'link',    label: 'Link ảnh gốc' },
+  { key: 'content', label: 'Nội dung (cột trống)' },
 ]
 
 function filterPool(pool, rid, sf) {
@@ -319,6 +324,13 @@ async function doExport() {
 .col-checks { display: flex; flex-wrap: wrap; gap: 8px 16px; }
 .check-option { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: var(--text-secondary); }
 .check-option input[type="checkbox"] { accent-color: var(--accent-gold); cursor: pointer; }
+.col-note {
+  margin-top: 8px; font-size: 11px; color: var(--text-muted);
+  background: var(--bg-primary); border-radius: 6px;
+  padding: 7px 10px; border-left: 3px solid var(--accent-gold);
+  line-height: 1.5;
+}
+.col-note code { font-family: monospace; background: rgba(0,0,0,.06); padding: 1px 4px; border-radius: 3px; }
 
 .export-preview {
   display: flex; align-items: center; gap: 8px;
