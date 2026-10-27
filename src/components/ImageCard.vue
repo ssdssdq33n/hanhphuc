@@ -26,6 +26,17 @@
         draggable="false"
       />
 
+      <!-- Full-res overlay: fades in on top of thumbnail when images folder is connected -->
+      <img
+        v-if="fullResSrc"
+        :src="fullResSrc"
+        class="fullres-overlay"
+        :class="{ loaded: fullResLoaded }"
+        @load="fullResLoaded = true"
+        draggable="false"
+        alt=""
+      />
+
       <!-- Hover overlay -->
       <transition name="ov">
         <div v-show="hovered || status !== null" class="overlay">
@@ -95,7 +106,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useGalleryStore } from '@/stores/gallery.js'
 
 const props = defineProps({
@@ -105,9 +116,11 @@ const props = defineProps({
 })
 const emit = defineEmits(['shift-click'])
 
-const store     = useGalleryStore()
-const hovered   = ref(false)
-const imgLoaded = ref(false)
+const store        = useGalleryStore()
+const hovered      = ref(false)
+const imgLoaded    = ref(false)
+const fullResSrc   = ref(null)   // blob URL of full-res image (null = not yet loaded)
+const fullResLoaded = ref(false) // true after the fullres img fires @load
 
 const status      = computed(() => store.selections[props.image.id]?.[store.currentRoundId] ?? null)
 const hasNote     = computed(() => !!store.notes[props.image.id]?.text)
@@ -120,6 +133,27 @@ const statusCls = computed(() => ({
 }))
 
 const thumbSrc = computed(() => `./${props.image.thumbPath}`)
+
+// Load full-res from the connected images folder (non-blocking)
+async function tryLoadFullRes() {
+  if (!store.imagesReady || fullResSrc.value) return
+  const url = await store.getFullResUrl(props.image)
+  if (url) fullResSrc.value = url
+}
+
+// When images folder is connected/disconnected, react immediately
+watch(() => store.imagesReady, (ready) => {
+  if (ready) {
+    tryLoadFullRes()
+  } else {
+    // Folder disconnected → blob URLs revoked, fall back to thumbnail
+    fullResSrc.value    = null
+    fullResLoaded.value = false
+  }
+})
+
+// On mount: card is visible (virtual masonry only renders visible range)
+onMounted(() => { if (store.imagesReady) tryLoadFullRes() })
 
 function onEnter() { hovered.value = true;  store.hoveredImageId = props.image.id }
 function onLeave() { hovered.value = false; if (store.hoveredImageId === props.image.id) store.hoveredImageId = null }
@@ -185,6 +219,19 @@ function openLightbox() { store.openLightbox(props.index) }
   position: relative; z-index: 1;
 }
 .img-wrap.loaded .thumb { opacity: 1; }
+
+/* Full-res overlay — positioned absolute over thumbnail, fades in when loaded */
+.fullres-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity .5s ease;
+  z-index: 2;
+  pointer-events: none;
+}
+.fullres-overlay.loaded { opacity: 1; }
 
 /* ── Hover overlay ── */
 .overlay {

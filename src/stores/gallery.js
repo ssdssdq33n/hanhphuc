@@ -51,6 +51,7 @@ export const useGalleryStore = defineStore('gallery', () => {
   const imagesFolderName = ref('')
   const imagesReady      = ref(false)
   const _fullResCache    = new Map()  // id → blob URL (persists across panel opens)
+  const _pendingLoads    = new Map()  // id → Promise<string|null> (dedup concurrent requests)
 
   // ── Folder storage state ───────────────────────────────────────────────────
 
@@ -459,6 +460,7 @@ export const useGalleryStore = defineStore('gallery', () => {
 
   /** Forget the images folder and clear all blob URL caches. */
   function disconnectImagesFolder() {
+    _pendingLoads.clear()
     _fullResCache.forEach(url => URL.revokeObjectURL(url))
     _fullResCache.clear()
     imagesHandle.value     = null
@@ -475,15 +477,25 @@ export const useGalleryStore = defineStore('gallery', () => {
   async function getFullResUrl(image) {
     if (!image || !imagesHandle.value || !imagesReady.value) return null
     if (_fullResCache.has(image.id)) return _fullResCache.get(image.id)
-    try {
-      const file = await fsStorage.getFileFromPath(imagesHandle.value, image.path)
-      const url  = URL.createObjectURL(file)
-      _fullResCache.set(image.id, url)
-      return url
-    } catch (e) {
-      if (e.name === 'NotAllowedError') imagesReady.value = false
-      return null
-    }
+    // Dedup: if a load is already in-flight for this id, await the same promise
+    if (_pendingLoads.has(image.id)) return _pendingLoads.get(image.id)
+
+    const p = (async () => {
+      try {
+        const file = await fsStorage.getFileFromPath(imagesHandle.value, image.path)
+        const url  = URL.createObjectURL(file)
+        _fullResCache.set(image.id, url)
+        return url
+      } catch (e) {
+        if (e.name === 'NotAllowedError') imagesReady.value = false
+        return null
+      } finally {
+        _pendingLoads.delete(image.id)
+      }
+    })()
+
+    _pendingLoads.set(image.id, p)
+    return p
   }
 
   // ── Compare ────────────────────────────────────────────────────────────────
