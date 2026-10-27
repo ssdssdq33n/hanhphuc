@@ -18,13 +18,20 @@ async function loadFullResForSlide(idx) {
   if (idx < 0 || idx >= items.length) return
   const imgData = items[idx]._imgData
   const url = await store.getFullResUrl(imgData)
-  if (!url) return
+  if (!url || !pswp) return
   loadedFullRes.add(idx)
   items[idx].src = url
-  // Refresh the slide in PhotoSwipe so it re-renders at full resolution
-  if (pswp && Math.abs(pswp.currIndex - idx) <= 1) {
-    try { pswp.refreshSlideContent(idx) } catch {}
+
+  if (pswp.currIndex === idx) {
+    // Directly swap the <img> src on the live slide — most reliable method
+    const el = pswp.currSlide?.content?.element
+    if (el?.tagName === 'IMG') {
+      el.src = url
+    } else {
+      try { pswp.refreshSlideContent(idx) } catch {}
+    }
   }
+  // For adjacent slides: items[idx].src is updated; PhotoSwipe uses it on navigation
 }
 
 async function openAt(startIndex) {
@@ -33,15 +40,19 @@ async function openAt(startIndex) {
 
   const { default: PhotoSwipe } = await import('photoswipe')
 
-  items = store.filteredImages.map(img => ({
-    // Always start with thumbnail; full-res loads on-demand when imagesReady
-    src:   `./${img.thumbPath}`,
-    msrc:  `./${img.thumbPath}`,
-    width:  img.width  || 1600,
-    height: img.height || 1067,
-    alt: img.id,
-    _imgData: img,
-  }))
+  // Use cached full-res blob URLs immediately if available (cards already loaded them)
+  items = store.filteredImages.map((img, i) => {
+    const cached = store.getCachedFullResUrl(img)
+    if (cached) loadedFullRes.add(i)
+    return {
+      src:    cached || `./${img.thumbPath}`,
+      msrc:   `./${img.thumbPath}`,
+      width:  img.width  || 1600,
+      height: img.height || 1067,
+      alt: img.id,
+      _imgData: img,
+    }
+  })
 
   pswp = new PhotoSwipe({
     dataSource: items,
@@ -155,10 +166,16 @@ async function openAt(startIndex) {
 
   pswp.on('afterInit', () => {
     updateCaption()
-    // Load full-res for the opening slide
     loadFullResForSlide(startIndex)
     loadFullResForSlide(startIndex - 1)
     loadFullResForSlide(startIndex + 1)
+  })
+
+  // Also load full-res when user zooms in (catches case where load was slow)
+  pswp.on('zoomPanUpdate', () => {
+    if (pswp.currSlide?.currZoomLevel > 1) {
+      loadFullResForSlide(pswp.currIndex)
+    }
   })
 
   function updateCaption() {

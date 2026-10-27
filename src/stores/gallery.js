@@ -498,6 +498,12 @@ export const useGalleryStore = defineStore('gallery', () => {
     return p
   }
 
+  /** Synchronous: returns cached blob URL if already loaded, else null */
+  function getCachedFullResUrl(image) {
+    if (!image) return null
+    return _fullResCache.get(image.id) ?? null
+  }
+
   // ── Compare ────────────────────────────────────────────────────────────────
 
   function toggleCompare(imageId) {
@@ -677,6 +683,6 @@ export const useGalleryStore = defineStore('gallery', () => {
     pickDataFolder, reconnectFolder, disconnectFolder, flushFolderSave,
     // images folder (full-res)
     imagesHandle, imagesFolderName, imagesReady,
-    getFullResUrl, pickImagesFolder, reconnectImagesFolder, disconnectImagesFolder,
+    getFullResUrl, getCachedFullResUrl, pickImagesFolder, reconnectImagesFolder, disconnectImagesFolder,
   }
 })

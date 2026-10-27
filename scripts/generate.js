@@ -15,7 +15,7 @@ const IMAGES_DIR = path.join(ROOT, 'images')
 const THUMB_DIR = path.join(ROOT, 'public', 'thumbnails')
 const MANIFEST_PATH = path.join(ROOT, 'public', 'manifest.json')
 
-const THUMB_WIDTH = 600     // px, max width for thumbnails
+const THUMB_WIDTH = 1200    // px, max width for thumbnails
 const THUMB_QUALITY = 80    // WebP quality
 const PLACEHOLDER_SIZE = 14 // tiny LQIP placeholder
 const CONCURRENCY = 8       // parallel Sharp operations
