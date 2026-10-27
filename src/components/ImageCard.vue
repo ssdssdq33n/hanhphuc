@@ -160,7 +160,7 @@ function onLeave() { hovered.value = false; if (store.hoveredImageId === props.i
 
 function onClick(e) {
   if (e.shiftKey) emit('shift-click', props.index)
-  else store.toggleStatus(props.image.id)
+  else openLightbox()
 }
 
 function setStatus(s) {
